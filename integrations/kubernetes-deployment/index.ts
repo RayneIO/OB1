@@ -7,6 +7,7 @@
  *
  * Environment variables:
  *   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD - PostgreSQL connection
+ *   DB_POOL_SIZE - Maximum PostgreSQL connections per process (default: 4)
  *   EMBEDDING_API_BASE - Base URL for OpenAI-compatible embedding API
  *   EMBEDDING_API_KEY - API key for the embedding service
  *   EMBEDDING_MODEL - Model name for embeddings (default: text-embedding-3-small)
@@ -30,6 +31,7 @@ const DB_PORT = parseInt(Deno.env.get("DB_PORT") || "5432", 10);
 const DB_NAME = Deno.env.get("DB_NAME") || "openbrain";
 const DB_USER = Deno.env.get("DB_USER") || "postgres";
 const DB_PASSWORD = Deno.env.get("DB_PASSWORD")!;
+const DB_POOL_SIZE = parseInt(Deno.env.get("DB_POOL_SIZE") || "4", 10);
 
 const EMBEDDING_API_BASE = Deno.env.get("EMBEDDING_API_BASE") || "https://openrouter.ai/api/v1";
 const EMBEDDING_API_KEY = Deno.env.get("EMBEDDING_API_KEY") || Deno.env.get("OPENROUTER_API_KEY") || "";
@@ -49,7 +51,7 @@ const pool = new Pool({
   database: DB_NAME,
   user: DB_USER,
   password: DB_PASSWORD,
-}, 20);
+}, DB_POOL_SIZE);
 
 type ThoughtMatch = {
   id: string;
