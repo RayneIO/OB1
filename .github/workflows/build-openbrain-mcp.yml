@@ -1,10 +1,11 @@
-name: Build openbrain-mcp-server
+name: Build Open Brain containers
 
 on:
   push:
     branches: [main]
     paths:
       - 'integrations/kubernetes-deployment/**'
+      - 'dashboards/open-brain-dashboard-next/**'
       - '.github/workflows/build-openbrain-mcp.yml'
   workflow_dispatch:
 
@@ -12,13 +13,27 @@ permissions:
   contents: read
   packages: write
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: rayneio/openbrain-mcp-server
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: rayneio/openbrain-mcp-server
+            context: integrations/kubernetes-deployment
+            file: integrations/kubernetes-deployment/Dockerfile
+            description: Open Brain MCP server (self-hosted Postgres+pgvector variant)
+          - image_name: rayneio/openbrain-rest-postgres
+            context: integrations/kubernetes-deployment
+            file: integrations/kubernetes-deployment/Dockerfile.rest
+            description: Open Brain REST gateway (self-hosted Postgres+pgvector variant)
+          - image_name: rayneio/openbrain-dashboard-next
+            context: dashboards/open-brain-dashboard-next
+            file: dashboards/open-brain-dashboard-next/Dockerfile
+            description: Open Brain Next.js dashboard
+    env:
+      REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v4
 
@@ -33,20 +48,20 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ matrix.image_name }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=long
             type=sha,prefix=sha-,format=short
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=Open Brain MCP server (self-hosted Postgres+pgvector variant)
+            org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.licenses=Apache-2.0
 
       - uses: docker/build-push-action@v6
         with:
-          context: integrations/kubernetes-deployment
-          file: integrations/kubernetes-deployment/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
